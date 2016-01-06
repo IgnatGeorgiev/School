@@ -1,9 +1,25 @@
+//--------------------------------------------
+// NAME: Ignat Georgiev
+// CLASS: XIa
+// NUMBER: 14
+// PROBLEM: #2
+// FILE NAME: shell.c
+// FILE PURPOSE:
+// Реализация на shell
+// При въвеждане на команда, програмата я интерпретира
+//---------------------------------------------
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+//--------------------------------------------
+// FUNCTION: num_of_args 
+// Тази функция намира броя на аргументите на командата, въведена от потребителя
+// PARAMETERS:
+// Единствен параметър : const char* cmdline - въведеният от потребителя стринг, в който намираме спейсовете и от там намираме броя на аргументите
+//----------------------------------------------
 int num_of_args(const char* cmdline)
 {
     int i=0,k=1;
@@ -13,6 +29,12 @@ int num_of_args(const char* cmdline)
     }
     return k;
 }
+//--------------------------------------------
+// FUNCTION: num_of_args 
+// Тази функция намира най-големия аргумент на командата, въведена от потребителя
+// PARAMETERS:
+// Единствен параметър : const char* cmdline - въведеният от потребителя стринг, в който намираме дължитата на аргументите и  връщаме дължината на най-дългия аргумент
+//----------------------------------------------
 int largest_arg(const char* buffer)
 {
     int i=0;
@@ -26,80 +48,84 @@ int largest_arg(const char* buffer)
     }
     for (i=0;i<strlen(buffer);i++)
     {
-        if (buffer[i]!=' ') 
+        if (buffer[i]!=' ') //проверка дали все още символът не е спейс и ако не е увеличаваме стойността на елемента от масива с едно
         {
             arr[k]++;
         }
-        else
+        else//сменяме на следващ елемент от масива
         {
             k++;
             i++;
         }
     }
-    
+    //в следващия цикъл търсим най-голямото число в масив
     for (k=0;k<num_of_args(buffer);k++)
     {
         if(arr[k]>maximum)
         maximum  = arr[k];
     }
-    free(arr);
+    free(arr);//освобождаваме паметта заделена за масива
   return maximum;
 }
+//--------------------------------------------
+// FUNCTION: parse_cmdline
+// Функция за обработване на командния ред, така че да го използваме с execv
+// PARAMETERS:
+// Единствен параметър : const char* cmdline -Стринг,взет от стандартния вход - използваме го, за да реализираме масив от стрингове, като разделим първоначалния стринг чрез strtok
+//----------------------------------------------
 char** parse_cmdline(const char* cmdline)
 {
-    char* temp = strdup(cmdline);
-    char** array = malloc(100 * sizeof(char*));
-    int k = num_of_args(cmdline);
+    char* temp = strdup(cmdline);//Временна променлива от тип стринг, използваме я, за да не използваме const char* във strtok
+    char** array = malloc(100 * sizeof(char*));//алокираме памет за масив от стрингове
+    int k = num_of_args(cmdline);//намираме броя на аргументите за да реалокираме нужната памет
     array = realloc(array,k*sizeof(char*));
     int i;
     for (i=0;i<k;i++)
     {
-        array[i]= malloc(sizeof(char)*largest_arg(cmdline));
+        array[i]= malloc(sizeof(char)*largest_arg(cmdline));//алокираме памет за всеки един стринг, като размер използваме най-големия аргумент
     }
     i=0;
-    array[i] = strtok(temp," ");   
+    array[i] = strtok(temp," ");//взимаме първия аргумент от стринга и го записваме като първи елемент в масива
     while(array[i]!=NULL)
     {
-        array[++i] = strtok(NULL," ");
+        array[++i] = strtok(NULL," ");//взимаме следващите аргументи и ги записваме в масива
     }
-    array[i-1][strlen(array[i-1])-1] = '\0';
+    array[i-1][strlen(array[i-1])-1] = '\0';//слагаме терминираща нула на края на последния елемент от масива
     return array;
-    free(array);
 }
 
 int main(int argc, char **argv)
 {
 
-        char** array;
+        char** array;//инициализираме масив от стрингове, нужен ни за изпълнението на execv
         int status;
         int i;
         char buffer[1024];
-        while(1)
+        while(1) //безкраен цикъл, продължава да се изпълнява докъто в терминала не се подаде ctrl + C
         {
             printf("shell:");
-            fgets(buffer, 1024, stdin);
-            int k = num_of_args(buffer);
-            array = malloc(k*sizeof(char*));
+            fgets(buffer, 1024, stdin);//прочитаме 1024 байта от стандартния вход (грешка е,но не знам как да го направя динамично)
+            int k = num_of_args(buffer);//намираме броя на аргументите
+            array = malloc(k*sizeof(char*));//алокираме памет за масива с помощта на броя на аргументите
             for (i=0;i<k;i++)
             {
-                array[i]= malloc(sizeof(char)*largest_arg(buffer));
+                array[i]= malloc(sizeof(char)*largest_arg(buffer));//алокираме памет за всеки елемент от масива с помощта на дължината им
             }
-            largest_arg(buffer);
-            array = parse_cmdline(buffer);
-            pid_t pid = fork(); 
-            if(pid<0)
+            array = parse_cmdline(buffer);//извикваме функцията, която ни обработва командния ред
+            pid_t pid = fork();//създаваме нов процес и запаметяваме ID-то му в променлива от тип pid_t
+            if(pid<0)//Ако id-то на процеса е по-малък от 0 има грешка в създаването на процеса
             {
                 printf("Fork failed:\n");
                 status = -1;
             }
-            else if(pid==0)
+            else if(pid==0)//Ако id-to на процеса е = 0, то тогава можем свободно да изпълним програмата
             {          
                     int rv = execv(array[0], array);
                     if (rv<0 && array[0][0]!='\0' ) perror(array[0]);
 
             }
             else {
-                if (waitpid(pid,&status,0)!=pid)
+                if (waitpid(pid,&status,0)!=pid)//следим състоянието на процеса,използвайки неговия процесен идентификатор
                 {
                     status = -1;
                 }
