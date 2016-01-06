@@ -94,7 +94,7 @@ int main(int argc, char **argv)
             }
             else if(pid==0)
             {          
-                    int rv = execvp(array[0], array);
+                    int rv = execv(array[0], array);
                     if (rv<0 && array[0][0]!='\0' ) perror(array[0]);
 
             }
