@@ -59,11 +59,13 @@ int largest_arg(const char* buffer)
         }
     }
     //в следващия цикъл търсим най-голямото число в масив
-    for (k=0;k<num_of_args(buffer);k++)
+    for (k=0;k<=num_of_args(buffer);k++)
     {
         if(arr[k]>maximum)
         maximum  = arr[k];
     }
+    printf("%d\n",maximum);
+
     free(arr);//освобождаваме паметта заделена за масива
   return maximum;
 }
@@ -76,13 +78,13 @@ int largest_arg(const char* buffer)
 char** parse_cmdline(const char* cmdline)
 {
     char* temp = strdup(cmdline);//Временна променлива от тип стринг, използваме я, за да не използваме const char* във strtok
-    char** array = malloc(100 * sizeof(char*));//алокираме памет за масив от стрингове
+    
     int k = num_of_args(cmdline);//намираме броя на аргументите за да реалокираме нужната памет
-    array = realloc(array,k*sizeof(char*));
     int i;
+    char** array = malloc(k * sizeof(char*));//алокираме памет за масив от стрингове
     for (i=0;i<k;i++)
     {
-        array[i]= malloc(sizeof(char)*largest_arg(cmdline));//алокираме памет за всеки един стринг, като размер използваме най-големия аргумент
+        array[i]= malloc(sizeof(char*)*largest_arg(cmdline));//алокираме памет за всеки един стринг, като размер използваме най-големия аргумент
     }
     i=0;
     array[i] = strtok(temp," ");//взимаме първия аргумент от стринга и го записваме като първи елемент в масива
@@ -90,27 +92,48 @@ char** parse_cmdline(const char* cmdline)
     {
         array[++i] = strtok(NULL," ");//взимаме следващите аргументи и ги записваме в масива
     }
-    array[i-1][strlen(array[i-1])-1] = '\0';//слагаме терминираща нула на края на последния елемент от масива
+    array[i-1][strlen(array[i-1])] = '\0';//слагаме терминираща нула на края на последния елемент от масива
     return array;
 }
 
+char* readingInput()
+{
+  int cap = 4096; /* Initial capacity for the char buffer */
+  int len = 0; /* Current offset of the buffer */
+  char *buffer = malloc(cap * sizeof (char));
+  int c;
+
+  /* Read char by char, breaking if we reach EOF or a newline */
+  while ((c = fgetc(stdin)) != '\n' && !feof(stdin))
+    {
+      buffer[len] = c;
+
+      /* When cap == len, we need to resize the buffer
+       * so that we don't overwrite any bytes
+       */
+      if (++len == cap)
+        /* Make the output buffer twice its current size */
+        buffer = realloc(buffer, (cap *= 2) * sizeof (char));
+    }
+
+  /* Trim off any unused bytes from the buffer */
+  buffer = realloc(buffer, (len + 1) * sizeof (char));
+  /* Pad the last byte so we don't overread the buffer in the future */
+  buffer[len] = '\0';
+  return buffer;
+}
 int main(int argc, char **argv)
 {
 
         char** array;//инициализираме масив от стрингове, нужен ни за изпълнението на execv
         int status;
         int i;
-        char buffer[1024];
+        char* buffer;
         while(1) //безкраен цикъл, продължава да се изпълнява докъто в терминала не се подаде ctrl + C
         {
             printf("shell:");
-            fgets(buffer, 1024, stdin);//прочитаме 1024 байта от стандартния вход (грешка е,но не знам как да го направя динамично)
+            buffer = readingInput(); 
             int k = num_of_args(buffer);//намираме броя на аргументите
-            array = malloc(k*sizeof(char*));//алокираме памет за масива с помощта на броя на аргументите
-            for (i=0;i<k;i++)
-            {
-                array[i]= malloc(sizeof(char)*largest_arg(buffer));//алокираме памет за всеки елемент от масива с помощта на дължината им
-            }
             array = parse_cmdline(buffer);//извикваме функцията, която ни обработва командния ред
             pid_t pid = fork();//създаваме нов процес и запаметяваме ID-то му в променлива от тип pid_t
             if(pid<0)//Ако id-то на процеса е по-малък от 0 има грешка в създаването на процеса
@@ -130,7 +153,6 @@ int main(int argc, char **argv)
                     status = -1;
                 }
             }
-            free(array);
         }
         return status;
 }
