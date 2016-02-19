@@ -123,36 +123,35 @@ char* readingInput()
   return buffer;
 }
 int main(int argc, char **argv)
-{
-
-        char** array;//инициализираме масив от стрингове, нужен ни за изпълнението на execv
-        int status;
-        int i;
-        char* buffer;
-        while(1) //безкраен цикъл, продължава да се изпълнява докъто в терминала не се подаде ctrl + C
+    {
+    char** array;//инициализираме масив от стрингове, нужен ни за изпълнението на execv
+    int status;
+    int i;
+    char* buffer;
+    while(1) //безкраен цикъл, продължава да се изпълнява докъто в терминала не се подаде ctrl + C
+    {
+        printf("shell:");
+        buffer = readingInput(); 
+        int k = num_of_args(buffer);//намираме броя на аргументите
+        array = parse_cmdline(buffer);//извикваме функцията, която ни обработва командния ред
+        pid_t pid = fork();//създаваме нов процес и запаметяваме ID-то му в променлива от тип pid_t
+        if(pid<0)//Ако id-то на процеса е по-малък от 0 има грешка в създаването на процеса
         {
-            printf("shell:");
-            buffer = readingInput(); 
-            int k = num_of_args(buffer);//намираме броя на аргументите
-            array = parse_cmdline(buffer);//извикваме функцията, която ни обработва командния ред
-            pid_t pid = fork();//създаваме нов процес и запаметяваме ID-то му в променлива от тип pid_t
-            if(pid<0)//Ако id-то на процеса е по-малък от 0 има грешка в създаването на процеса
+            printf("Fork failed:\n");
+            status = -1;
+        }
+        else if(pid==0)//Ако id-to на процеса е = 0, то тогава можем свободно да изпълним програмата
+        {          
+                int rv = execv(array[0], array);
+                if (rv<0 && array[0][0]!='\0' ) perror(array[0]);
+
+        }
+        else {
+            if (waitpid(pid,&status,0)!=pid)//следим състоянието на процеса,използвайки неговия процесен идентификатор
             {
-                printf("Fork failed:\n");
                 status = -1;
             }
-            else if(pid==0)//Ако id-to на процеса е = 0, то тогава можем свободно да изпълним програмата
-            {          
-                    int rv = execv(array[0], array);
-                    if (rv<0 && array[0][0]!='\0' ) perror(array[0]);
-
-            }
-            else {
-                if (waitpid(pid,&status,0)!=pid)//следим състоянието на процеса,използвайки неговия процесен идентификатор
-                {
-                    status = -1;
-                }
-            }
         }
-        return status;
+    }
+    return status;
 }
